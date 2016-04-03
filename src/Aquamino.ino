@@ -76,8 +76,8 @@ byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
 byte prechour;
 //byte test;
 byte zero=0x00;
-char  *Day[] = {"","Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
-char  *Mon[] = {"","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+const char  *Day[] = {"","Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+const char  *Mon[] = {"","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
  
 // Convert normal decimal numbers to binary coded decimal
 byte decToBcd(byte val)
