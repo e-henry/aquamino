@@ -41,16 +41,17 @@
 
 
 
-// The temperature sensor data pin is connected 
+// The LM35 temperature sensor data pin is connected 
 //to the analog 0 on the Arduino
 #define AIR_TEMP_PIN 0 //Analog 0
+// The DS18B20 is on 8
 #define WATER_TEMP_PIN 8 //Digital 8
 #define MIN 24.00
 #define MAX 25.00
 #define WARMER 9 //Digital 9
 #define LIGHT 10 //Digital 10
-#define HOUR_ON 8
-#define HOUR_OFF 20
+#define HOUR_ON 12
+#define HOUR_OFF 23
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire(WATER_TEMP_PIN);
@@ -58,7 +59,7 @@ OneWire oneWire(WATER_TEMP_PIN);
 DallasTemperature sensors(&oneWire);
 
 // initialize the LCD library
-SerialLCD lcd(11,12);//this is a must, assign soft serial pins Tx Rx
+SerialLCD lcd(11,12);//assign soft serial pins Tx Rx
 
 
 // initialize the library with the numbers of the interface pins
@@ -67,7 +68,7 @@ SerialLCD lcd(11,12);//this is a must, assign soft serial pins Tx Rx
 
 float fWaterTemp=0;
 float fAirTemp=0;
-boolean bOn=false;
+boolean bWarmerOn=false;
 boolean bLightOn=false;
 int ledPin =  13;
 
@@ -181,9 +182,9 @@ void setup() {
   lcd.backlight();
   lcd.noCursor();
   lcd.setCursor(0, 0);
-  lcd.print("    Aquamino    ");//xx/04/2016
+  lcd.print("    Aquamino    ");//05/04/2016
   lcd.setCursor(0, 1);
-  lcd.print("     v0.1.0 ");
+  lcd.print("     v0.2.0 ");
   delay(4000);
   
   lcd.clear();
@@ -224,7 +225,26 @@ float getWaterTemp(){
 
 }
 
+void manageTemperature() {
+  fAirTemp = getAirTemp();
+  fWaterTemp = getWaterTemp();
 
+  if (fWaterTemp == -127.00 || fWaterTemp == 85.00 || fWaterTemp < 1.00 || year == 0) {
+    lcd.setCursor(0, 0);
+    lcd.print("Error:");
+    lcd.print(fWaterTemp);
+    warmer(LOW);
+    return;
+  }
+  if((fWaterTemp < MIN) && !bWarmerOn){
+    warmer(HIGH);
+    bWarmerOn = true;
+  }
+  if((fWaterTemp > MAX) && bWarmerOn){
+    warmer(LOW);
+    bWarmerOn = false;
+  }
+}
 void loop() {
   delay(1000);//TODO :2s
   getTime();
@@ -239,50 +259,12 @@ void loop() {
   if (((hour < HOUR_ON || hour >= HOUR_OFF) && bLightOn)  || year == 0) {
     lcd.noBacklight();
     bLightOn=false;
-    warmer(LOW);
     light(LOW);
   }
-    
-  
   
   /******Temperature management******/
-  fAirTemp = getAirTemp();
-  fWaterTemp = getWaterTemp();
-
-  if (fWaterTemp == -127.00 || fWaterTemp == 85.00 || fWaterTemp < 1.00 || year == 0) {
-    lcd.setCursor(0, 0);
-    lcd.print("Error:");
-    lcd.print(fWaterTemp);
-    warmer(LOW);
-    return;
-  }
-  if(bLightOn){
-    if((fWaterTemp<MIN) && (!bOn)){
-      warmer(HIGH);
-      //iStart=millis()/1000;
-      bOn=true;
-      //delay(1000);TODO remettre
-    }
-    if((fWaterTemp>MAX) && (bOn)){
-      warmer(LOW);
-      bOn=false;
-      //iStop=millis()/1000;
-      //iTimeOn+=(iStop-iStart)/60;
-      affiche();
-      delay(60000);//TODO : do something better
-    }
-  }
-  ////Serial.print("Temp:");
-  //Serial.print(fWaterTemp);
-  //Serial.print(", Warmer: ");
-  /*if(bOn)
-    Serial.println("ON");
-  else
-    Serial.println("OFF");
-  */
-  
+  manageTemperature();
   affiche();
-  //delay(1000);
 }
 
 
@@ -316,7 +298,7 @@ void affiche(){
 
   //Warmer state
   lcd.setCursor(10, 0);
-  if(bOn)
+  if(bWarmerOn)
     lcd.print("ON ");
   else
     lcd.print("OFF");
@@ -339,7 +321,7 @@ void affiche(){
     lcd.print("   ");
   //}else{
   //Time On
-    /*if(bOn){
+    /*if(bWarmerOn){
       //i=iTimeOn+((millis()/1000)-iStart)/60;
       //lcd.print((unsigned long)i,DEC);
     }
@@ -347,7 +329,7 @@ void affiche(){
       lcd.print((unsigned long)iTimeOn,DEC);
     lcd.print("m      ");
     lcd.setCursor(10, 1);
-    if(bOn){
+    if(bWarmerOn){
       iConso=(i)*40.0/60.0;//40w
     }
     else
