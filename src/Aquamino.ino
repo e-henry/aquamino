@@ -51,7 +51,7 @@
 #define WARMER 9 //Digital 9
 #define LIGHT 10 //Digital 10
 #define HOUR_ON 12
-#define HOUR_OFF 23
+#define HOUR_OFF 22
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire(WATER_TEMP_PIN);
