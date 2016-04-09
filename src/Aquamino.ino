@@ -18,6 +18,8 @@
     Project can be found on Github : https://github.com/e-henry/aquamino/
 
  */
+//Include Arduino when not using Arduine IDE
+#include <Arduino.h>
 
 
 // include the library code:
@@ -32,16 +34,16 @@
 
 #define DS1307_I2C_ADDRESS 0x68  // This is the I2C address
 #if defined(ARDUINO) && ARDUINO >= 100   // Arduino v1.0 and newer
-  #define I2C_WRITE Wire.write 
+  #define I2C_WRITE Wire.write
   #define I2C_READ Wire.read
-#else                                   // Arduino Prior to v1.0 
-  #define I2C_WRITE Wire.send 
+#else                                   // Arduino Prior to v1.0
+  #define I2C_WRITE Wire.send
   #define I2C_READ Wire.receive
 #endif
 
 
 
-// The LM35 temperature sensor data pin is connected 
+// The LM35 temperature sensor data pin is connected
 //to the analog 0 on the Arduino
 #define AIR_TEMP_PIN 0 //Analog 0
 // The DS18B20 is on 8
@@ -55,7 +57,7 @@
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire(WATER_TEMP_PIN);
-// Pass our oneWire reference to Dallas Temperature. 
+// Pass our oneWire reference to Dallas Temperature.
 DallasTemperature sensors(&oneWire);
 
 // initialize the LCD library
@@ -79,28 +81,28 @@ byte prechour;
 byte zero=0x00;
 const char  *Day[] = {"","Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
 const char  *Mon[] = {"","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
- 
+
 // Convert normal decimal numbers to binary coded decimal
 byte decToBcd(byte val)
 {
   return ( (val/10*16) + (val%10) );
 }
- 
+
 // Convert binary coded decimal to normal decimal numbers
 byte bcdToDec(byte val)
 {
   return ( (val/16*10) + (val%16) );
 }
- 
+
 // 1) Sets the date and time on the ds1307
 // 2) Starts the clock
 // 3) Sets hour mode to 24 hour clock
 // Assumes you're passing in valid numbers, Probably need to put in checks for valid numbers.
- 
-void setTime()                
+
+void setTime()
 {
- 
-   second = (byte) ((Serial.read() - 48) * 10 + (Serial.read() - 48)); // Use of (byte) type casting and ascii math to achieve result.  
+
+   second = (byte) ((Serial.read() - 48) * 10 + (Serial.read() - 48)); // Use of (byte) type casting and ascii math to achieve result.
    minute = (byte) ((Serial.read() - 48) *10 +  (Serial.read() - 48));
    hour  = (byte) ((Serial.read() - 48) *10 +  (Serial.read() - 48));
    dayOfWeek = (byte) (Serial.read() - 48);
@@ -119,7 +121,7 @@ void setTime()
    I2C_WRITE(decToBcd(year));
    Wire.endTransmission();
 }
- 
+
 // Gets the date and time from the ds1307 and prints result
 void getTime()
 {
@@ -127,9 +129,9 @@ void getTime()
   Wire.beginTransmission(DS1307_I2C_ADDRESS);
   I2C_WRITE(zero);
   Wire.endTransmission();
- 
+
   Wire.requestFrom(DS1307_I2C_ADDRESS, 7);
- 
+
   // A few of these need masks because certain bits are control bits
   second     = bcdToDec(I2C_READ() & 0x7f);
   minute     = bcdToDec(I2C_READ());
@@ -138,7 +140,7 @@ void getTime()
   dayOfMonth = bcdToDec(I2C_READ());
   month      = bcdToDec(I2C_READ());
   year       = bcdToDec(I2C_READ());
- 
+
   /*if (hour < 10)
     Serial.print("0");
   Serial.print(hour, DEC);
@@ -161,14 +163,14 @@ void getTime()
     Serial.print("0");
   Serial.println(year, DEC);
   */
- 
+
 }
 
 void setup() {
   Wire.begin();//For the RTC
-  Serial.begin(57600); 
-  
-  
+  Serial.begin(57600);
+
+
   pinMode(WARMER, OUTPUT);
   digitalWrite(WARMER, LOW);
   pinMode(LIGHT, OUTPUT);
@@ -176,21 +178,21 @@ void setup() {
 
   // Start up the Dallas library
   sensors.begin();
-  
+
   prechour=hour;
   lcd.begin();
   lcd.backlight();
   lcd.noCursor();
   lcd.setCursor(0, 0);
-  lcd.print("    Aquamino    ");//05/04/2016
+  lcd.print("    Aquamino    ");//09/04/2016
   lcd.setCursor(0, 1);
-  lcd.print("     v0.2.0 ");
+  lcd.print("     v0.2.1 ");
   delay(4000);
-  
+
   lcd.clear();
 }
 
-void light(int iState){  
+void light(int iState){
   digitalWrite(LIGHT, iState);
 }
 
@@ -211,7 +213,7 @@ float getAirTemp(){
 
 float getWaterTemp(){
   float fT = 99;
-  // call sensors.requestTemperatures() to issue a global temperature 
+  // call sensors.requestTemperatures() to issue a global temperature
   // request to all devices on the bus
   //Serial.print("Requesting temperatures...");
   sensors.requestTemperatures(); // Send the command to get temperatures
@@ -220,7 +222,7 @@ float getWaterTemp(){
   // We use the function ByIndex, and as an example get the temperature from the first sensor only.
   //Serial.print("Temperature for the device 1 (index 0) is: ");
   fT = sensors.getTempCByIndex(0);
-  //Serial.println(fT);  
+  //Serial.println(fT);
   return fT;
 
 }
@@ -245,40 +247,17 @@ void manageTemperature() {
     bWarmerOn = false;
   }
 }
-void loop() {
-  delay(1000);//TODO :2s
-  getTime();
-  
-  /**********Light management*********/
-  if (hour >= HOUR_ON && hour < HOUR_OFF && !bLightOn) {
-    lcd.backlight();
-    bLightOn=true;
-    light(HIGH);
-  }
-
-  if (((hour < HOUR_ON || hour >= HOUR_OFF) && bLightOn)  || year == 0) {
-    lcd.noBacklight();
-    bLightOn=false;
-    light(LOW);
-  }
-  
-  /******Temperature management******/
-  manageTemperature();
-  affiche();
-}
-
-
 
 /*
 *****************
-*29.25°c OFF
-*30000m   300kWh
+*A:20 W:25 OFF
+*18:02:05  SAT
 *****************
 */
 void affiche(){
   int iConso=0;
   int i=0;
-  
+
   if(hour != prechour){
     prechour=hour;
     lcd.begin();
@@ -302,7 +281,7 @@ void affiche(){
     lcd.print("ON ");
   else
     lcd.print("OFF");
-    
+
   lcd.setCursor(0, 1);
   //if(second<30){//Display Time
     if (hour < 10)
@@ -319,25 +298,27 @@ void affiche(){
     lcd.print("  ");
     lcd.print(Day[dayOfWeek]);
     lcd.print("   ");
-  //}else{
-  //Time On
-    /*if(bWarmerOn){
-      //i=iTimeOn+((millis()/1000)-iStart)/60;
-      //lcd.print((unsigned long)i,DEC);
-    }
-    else
-      lcd.print((unsigned long)iTimeOn,DEC);
-    lcd.print("m      ");
-    lcd.setCursor(10, 1);
-    if(bWarmerOn){
-      iConso=(i)*40.0/60.0;//40w
-    }
-    else
-      iConso=(iTimeOn)*40.0/60.0;//40w
-    lcd.print((unsigned long)iConso,DEC);
-    lcd.print("Wh");
-    */
-  //}
-  
 }
 
+
+void loop() {
+  delay(1000);//TODO :2s
+  getTime();
+
+  /**********Light management*********/
+  if (hour >= HOUR_ON && hour < HOUR_OFF && !bLightOn) {
+    lcd.backlight();
+    bLightOn=true;
+    light(HIGH);
+  }
+
+  if (((hour < HOUR_ON || hour >= HOUR_OFF) && bLightOn)  || year == 0) {
+    lcd.noBacklight();
+    bLightOn=false;
+    light(LOW);
+  }
+
+  /******Temperature management******/
+  manageTemperature();
+  affiche();
+}
