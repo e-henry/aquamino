@@ -48,7 +48,7 @@
 #define AIR_TEMP_PIN 0 //Analog 0
 // The DS18B20 is on 8
 #define WATER_TEMP_PIN 8 //Digital 8
-#define MIN 24.00
+#define MIN 24.50
 #define MAX 25.00
 #define WARMER 9 //Digital 9
 #define LIGHT 10 //Digital 10
@@ -68,15 +68,16 @@ SerialLCD lcd(11,12);//assign soft serial pins Tx Rx
 //LiquidCrystal lcd(rs, enable, d4, d5, d6, d7)
 //LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
-float fWaterTemp=0;
-float fAirTemp=0;
-boolean bWarmerOn=false;
-boolean bLightOn=false;
+float fWaterTemp = 0;
+float fAirTemp = 0;
+boolean bWarmerOn = false;
+boolean bLightOn = false;
+boolean bNeedPrintScreen = false;
 int ledPin =  13;
 
 // Global Variables
 byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
-byte prechour;
+byte prevHour, prevMinute;
 //byte test;
 byte zero=0x00;
 const char  *Day[] = {"","Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
@@ -108,7 +109,7 @@ void setTime()
    dayOfWeek = (byte) (Serial.read() - 48);
    dayOfMonth = (byte) ((Serial.read() - 48) *10 +  (Serial.read() - 48));
    month = (byte) ((Serial.read() - 48) *10 +  (Serial.read() - 48));
-   year= (byte) ((Serial.read() - 48) *10 +  (Serial.read() - 48));
+   year = (byte) ((Serial.read() - 48) *10 +  (Serial.read() - 48));
    Wire.beginTransmission(DS1307_I2C_ADDRESS);
    I2C_WRITE(zero);
    I2C_WRITE(decToBcd(second) & 0x7f);    // 0 to bit 7 starts the clock
@@ -179,14 +180,15 @@ void setup() {
   // Start up the Dallas library
   sensors.begin();
 
-  prechour=hour;
+  prevHour = hour;
+  prevMinute = minute;
   lcd.begin();
   lcd.backlight();
   lcd.noCursor();
   lcd.setCursor(0, 0);
   lcd.print("    Aquamino    ");//09/04/2016
   lcd.setCursor(0, 1);
-  lcd.print("     v0.2.1 ");
+  lcd.print("     v0.2.2 ");
   delay(4000);
 
   lcd.clear();
@@ -241,10 +243,12 @@ void manageTemperature() {
   if((fWaterTemp < MIN) && !bWarmerOn){
     warmer(HIGH);
     bWarmerOn = true;
+    bNeedPrintScreen = true;
   }
   if((fWaterTemp > MAX) && bWarmerOn){
     warmer(LOW);
     bWarmerOn = false;
+    bNeedPrintScreen = true;
   }
 }
 
@@ -254,12 +258,10 @@ void manageTemperature() {
 *18:02:05  SAT
 *****************
 */
-void affiche(){
-  int iConso=0;
-  int i=0;
+void printScreen(){
 
-  if(hour != prechour){
-    prechour=hour;
+  if(hour != prevHour){
+    prevHour=hour;
     lcd.begin();
     if(bLightOn)
       lcd.backlight();
@@ -273,17 +275,17 @@ void affiche(){
   lcd.print( " " );
   lcd.print("W:");
   lcd.print(fWaterTemp, DEC);
-  lcd.print( " " );
+  lcd.print( "  " );
 
   //Warmer state
-  lcd.setCursor(10, 0);
+  lcd.setCursor(11, 0);
   if(bWarmerOn)
     lcd.print("ON ");
   else
     lcd.print("OFF");
 
   lcd.setCursor(0, 1);
-  //if(second<30){//Display Time
+  lcd.print("  ");
     if (hour < 10)
       lcd.print("0");
     lcd.print((unsigned long)hour, DEC);
@@ -291,11 +293,11 @@ void affiche(){
     if (minute < 10)
       lcd.print("0");
     lcd.print((unsigned long)minute, DEC);
-    lcd.print(":");
+    /*lcd.print(":");
     if (second < 10)
       lcd.print("0");
-    lcd.print((unsigned long)second, DEC);
-    lcd.print("  ");
+    lcd.print((unsigned long)second, DEC);*/
+    lcd.print("    ");
     lcd.print(Day[dayOfWeek]);
     lcd.print("   ");
 }
@@ -310,15 +312,22 @@ void loop() {
     lcd.backlight();
     bLightOn=true;
     light(HIGH);
+    bNeedPrintScreen = true;
   }
 
   if (((hour < HOUR_ON || hour >= HOUR_OFF) && bLightOn)  || year == 0) {
     lcd.noBacklight();
     bLightOn=false;
     light(LOW);
+    bNeedPrintScreen = true;
   }
 
   /******Temperature management******/
   manageTemperature();
-  affiche();
+
+  if (minute != prevMinute || bNeedPrintScreen) {
+    printScreen();
+    prevMinute = minute;
+    bNeedPrintScreen = false;
+  }
 }
