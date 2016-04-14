@@ -1,25 +1,28 @@
 /*
-  SerialLCD.h - Serial LCD driver Library
-  2010 Copyright (c) Seeed Technology Inc.  All right reserved.
+ * SerialLCD.cpp
+ * Serial LCD driver Library
+ *
+ * Copyright (c) 2010 seeed technology inc.
+ * Author        :   Jimbo.We
+ * Contribution  :   Visweswara R 
+ * Create Time   :   Dec 2010
+ * Change Log    :   Modified 15 March,2012 for Arduino 1.0 IDE by Frankie.Chu
+ *  
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
  
-  Original Author: Jimbo.We
-  Contribution: Visweswara R 
-  
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
-
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
@@ -192,7 +195,6 @@ void SerialLCD::backlight(void)
     SoftwareSerial::write(SLCD_BACKLIGHT_ON);   
 }
 // Print Commands
-
 void SerialLCD::print(uint8_t b)
 {
     SoftwareSerial::write(SLCD_CHAR_HEADER);
@@ -206,26 +208,13 @@ void SerialLCD::print(const char b[])
 
 void SerialLCD::print(unsigned long n, uint8_t base)
 {
-    unsigned char buf[8 * sizeof(long)]; // Assumes 8-bit chars.
-    unsigned long i = 0;
-
-    if (base == 0) print(n);
-
-    else if(base!=0)
-    {
-        if (n == 0) {
-            print('0');
-            return;
-        }
-
-        while (n > 0) {
-            buf[i++] = n % base;
-            n /= base;
-        }
-
-        for (; i > 0; i--)
-            print((char) (buf[i - 1] < 10 ?
-                          '0' + buf[i - 1] :
-                          'A' + buf[i - 1] - 10));
-    }
+    SoftwareSerial::write(SLCD_CHAR_HEADER);
+    SoftwareSerial::print(n, base); 
 }
+
+void SerialLCD::write(const char b[], uint8_t len)
+{
+    SoftwareSerial::write(SLCD_CHAR_HEADER);
+    SoftwareSerial::write(b, len);
+}
+
