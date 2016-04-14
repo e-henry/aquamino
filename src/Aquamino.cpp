@@ -179,6 +179,7 @@ void setup() {
 
   // Start up the Dallas library
   sensors.begin();
+  sensors.setResolution(11);// 20.125°C
 
   prevHour = hour;
   prevMinute = minute;
@@ -186,9 +187,9 @@ void setup() {
   lcd.backlight();
   lcd.noCursor();
   lcd.setCursor(0, 0);
-  lcd.print("    Aquamino    ");//09/04/2016
+  lcd.print("    Aquamino    ");//14/04/2016
   lcd.setCursor(0, 1);
-  lcd.print("     v0.2.2 ");
+  lcd.print("     v0.2.3 ");
   delay(4000);
 
   lcd.clear();
@@ -259,6 +260,8 @@ void manageTemperature() {
 *****************
 */
 void printScreen(){
+  char floatBuffer[10];
+
 
   if(hour != prevHour){
     prevHour=hour;
@@ -270,36 +273,38 @@ void printScreen(){
   }
   //Temperature
   lcd.setCursor(0, 0);
-  lcd.print("A:");
-  lcd.print(fAirTemp, DEC);
-  lcd.print( " " );
+  lcd.print(" A:");
+  dtostrf(fAirTemp, 2, 1, floatBuffer);
+  lcd.write((const char *) floatBuffer, 4);
+  lcd.print( "  " );
   lcd.print("W:");
-  lcd.print(fWaterTemp, DEC);
+  dtostrf(fWaterTemp, 2, 1, floatBuffer);
+  lcd.write((const char *) floatBuffer, 4);
   lcd.print( "  " );
 
+
+  lcd.setCursor(0, 1);
+  lcd.print(" ");
+  if (hour < 10)
+    lcd.print("0");
+  lcd.print((unsigned long)hour, DEC);
+  lcd.print(":");
+  if (minute < 10)
+    lcd.print("0");
+  lcd.print((unsigned long)minute, DEC);
+  /*lcd.print(":");
+  if (second < 10)
+    lcd.print("0");
+  lcd.print((unsigned long)second, DEC);*/
+  lcd.print(" ");
+  lcd.print(Day[dayOfWeek]);
+  lcd.print("  ");
   //Warmer state
-  lcd.setCursor(11, 0);
   if(bWarmerOn)
-    lcd.print("ON ");
+    lcd.print(" ON");
   else
     lcd.print("OFF");
 
-  lcd.setCursor(0, 1);
-  lcd.print("  ");
-    if (hour < 10)
-      lcd.print("0");
-    lcd.print((unsigned long)hour, DEC);
-    lcd.print(":");
-    if (minute < 10)
-      lcd.print("0");
-    lcd.print((unsigned long)minute, DEC);
-    /*lcd.print(":");
-    if (second < 10)
-      lcd.print("0");
-    lcd.print((unsigned long)second, DEC);*/
-    lcd.print("    ");
-    lcd.print(Day[dayOfWeek]);
-    lcd.print("   ");
 }
 
 
