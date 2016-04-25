@@ -255,8 +255,8 @@ void manageTemperature() {
 
 /*
 *****************
-*A:20 W:25 OFF
-*18:02:05  SAT
+* A:20.3 W:25.2
+* 18:02 SAT OFF
 *****************
 */
 void printScreen(){
