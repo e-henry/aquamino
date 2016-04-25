@@ -18,6 +18,9 @@
     Project can be found on Github : https://github.com/e-henry/aquamino/
 
  */
+
+// Set to 1 to have debug info on serial interface
+#define DEBUG 0
 //Include Arduino when not using Arduino IDE
 #include <Arduino.h>
 
@@ -108,7 +111,8 @@ void getTime()
   month      = bcdToDec(I2C_READ());
   year       = bcdToDec(I2C_READ());
 
-  /*if (hour < 10)
+#if DEBUG
+  if (hour < 10)
     Serial.print("0");
   Serial.print(hour, DEC);
   Serial.print(":");
@@ -129,7 +133,7 @@ void getTime()
   if (year < 10)
     Serial.print("0");
   Serial.println(year, DEC);
-  */
+#endif
 
 }
 
@@ -155,7 +159,10 @@ void setup() {
   lcd.setCursor(0, 0);
   lcd.print("    Aquamino    ");//14/04/2016
   lcd.setCursor(0, 1);
-  lcd.print("     v0.2.3 ");
+  lcd.print("     v0.2.3");
+  #if DEBUG
+  lcd.print(" DEBUG");
+  #endif
   delay(4000);
 
   lcd.clear();
@@ -185,9 +192,13 @@ float getWaterTemp(){
   // Send the command to get temperatures
   sensors.requestTemperatures();
   //Get the temperature from the first sensor found
-  //Serial.print("Temperature for 1st DS18B20 probe is: ");
+  #if DEBUG
+  Serial.print("Temperature for 1st DS18B20 probe is: ");
+  #endif
   fT = sensors.getTempCByIndex(0);
-  //Serial.println(fT);
+  #if DEBUG
+  Serial.println(fT);
+  #endif
   return fT;
 
 }
@@ -266,12 +277,15 @@ void printScreen(){
     lcd.print(" ON");
   else
     lcd.print("OFF");
+  #if DEBUG
+  lcd.print(" D");
+  #endif
 
 }
 
 
 void loop() {
-  delay(1000);//TODO :2s
+  delay(1000);
   getTime();
 
   /**********Light management*********/

@@ -1,7 +1,6 @@
 PROGRAM
 -------
 
- - Debug mode
  - Summer High temperature management (with fan)
 
 
