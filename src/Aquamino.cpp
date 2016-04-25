@@ -157,9 +157,9 @@ void setup() {
   lcd.backlight();
   lcd.noCursor();
   lcd.setCursor(0, 0);
-  lcd.print("    Aquamino    ");//14/04/2016
+  lcd.print("    Aquamino    ");//25/04/2016
   lcd.setCursor(0, 1);
-  lcd.print("     v0.2.3");
+  lcd.print("     v0.2.4");
   #if DEBUG
   lcd.print(" DEBUG");
   #endif
@@ -228,8 +228,8 @@ void manageTemperature() {
 
 /*
 *****************
-* A:20.3 W:25.2
-* 18:02 SAT OFF
+* A:20.3  W:25.2
+* 18:02 SAT  OFF
 *****************
 */
 void printScreen(){
@@ -278,7 +278,7 @@ void printScreen(){
   else
     lcd.print("OFF");
   #if DEBUG
-  lcd.print(" D");
+  lcd.print("D");
   #endif
 
 }
