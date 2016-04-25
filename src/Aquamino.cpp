@@ -18,19 +18,17 @@
     Project can be found on Github : https://github.com/e-henry/aquamino/
 
  */
-//Include Arduino when not using Arduine IDE
+//Include Arduino when not using Arduino IDE
 #include <Arduino.h>
 
 
 // include the library code:
 #include <SerialLCD.h>
-#include <SoftwareSerial.h> //this is a must
+#include <SoftwareSerial.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
 #include "Wire.h"
-//Pour savoir la ram utilisée
-//#include <MemoryFree.h>
 
 #define DS1307_I2C_ADDRESS 0x68  // This is the I2C address
 #if defined(ARDUINO) && ARDUINO >= 100   // Arduino v1.0 and newer
@@ -60,11 +58,13 @@ OneWire oneWire(WATER_TEMP_PIN);
 // Pass our oneWire reference to Dallas Temperature.
 DallasTemperature sensors(&oneWire);
 
-// initialize the LCD library
+// If you are using serial interface LCD
+// initialize the LCD library with the SerialLCD lib
 SerialLCD lcd(11,12);//assign soft serial pins Tx Rx
 
 
-// initialize the library with the numbers of the interface pins
+// If you are using a parallel interface LCD
+// initialize the LiquidCrystal library with the numbers of the interface pins
 //LiquidCrystal lcd(rs, enable, d4, d5, d6, d7)
 //LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
@@ -83,44 +83,10 @@ byte zero=0x00;
 const char  *Day[] = {"","Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
 const char  *Mon[] = {"","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
 
-// Convert normal decimal numbers to binary coded decimal
-byte decToBcd(byte val)
-{
-  return ( (val/10*16) + (val%10) );
-}
-
 // Convert binary coded decimal to normal decimal numbers
 byte bcdToDec(byte val)
 {
   return ( (val/16*10) + (val%16) );
-}
-
-// 1) Sets the date and time on the ds1307
-// 2) Starts the clock
-// 3) Sets hour mode to 24 hour clock
-// Assumes you're passing in valid numbers, Probably need to put in checks for valid numbers.
-
-void setTime()
-{
-
-   second = (byte) ((Serial.read() - 48) * 10 + (Serial.read() - 48)); // Use of (byte) type casting and ascii math to achieve result.
-   minute = (byte) ((Serial.read() - 48) *10 +  (Serial.read() - 48));
-   hour  = (byte) ((Serial.read() - 48) *10 +  (Serial.read() - 48));
-   dayOfWeek = (byte) (Serial.read() - 48);
-   dayOfMonth = (byte) ((Serial.read() - 48) *10 +  (Serial.read() - 48));
-   month = (byte) ((Serial.read() - 48) *10 +  (Serial.read() - 48));
-   year = (byte) ((Serial.read() - 48) *10 +  (Serial.read() - 48));
-   Wire.beginTransmission(DS1307_I2C_ADDRESS);
-   I2C_WRITE(zero);
-   I2C_WRITE(decToBcd(second) & 0x7f);    // 0 to bit 7 starts the clock
-   I2C_WRITE(decToBcd(minute));
-   I2C_WRITE(decToBcd(hour));      // If you want 12 hour am/pm you need to set
-                                   // bit 6 (also need to change readDateDs1307)
-   I2C_WRITE(decToBcd(dayOfWeek));
-   I2C_WRITE(decToBcd(dayOfMonth));
-   I2C_WRITE(decToBcd(month));
-   I2C_WRITE(decToBcd(year));
-   Wire.endTransmission();
 }
 
 // Gets the date and time from the ds1307 and prints result
@@ -216,14 +182,10 @@ float getAirTemp(){
 
 float getWaterTemp(){
   float fT = 99;
-  // call sensors.requestTemperatures() to issue a global temperature
-  // request to all devices on the bus
-  //Serial.print("Requesting temperatures...");
-  sensors.requestTemperatures(); // Send the command to get temperatures
-  //Serial.println("DONE");
-  // After we got the temperatures, we can print them here.
-  // We use the function ByIndex, and as an example get the temperature from the first sensor only.
-  //Serial.print("Temperature for the device 1 (index 0) is: ");
+  // Send the command to get temperatures
+  sensors.requestTemperatures();
+  //Get the temperature from the first sensor found
+  //Serial.print("Temperature for 1st DS18B20 probe is: ");
   fT = sensors.getTempCByIndex(0);
   //Serial.println(fT);
   return fT;
