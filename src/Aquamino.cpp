@@ -241,12 +241,12 @@ void manageTemperature() {
     warmer(LOW);
     return;
   }
-  if((fWaterTemp < MIN) && !bWarmerOn){
+  if((fWaterTemp < MIN)){
     warmer(HIGH);
     bWarmerOn = true;
     bNeedPrintScreen = true;
   }
-  if((fWaterTemp > MAX) && bWarmerOn){
+  if((fWaterTemp > MAX)){
     warmer(LOW);
     bWarmerOn = false;
     bNeedPrintScreen = true;
