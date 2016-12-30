@@ -26,20 +26,19 @@
 // include the library code:
 #include <SerialLCD.h>
 #include <SoftwareSerial.h>
+// For the DS18B20 :
 #include <OneWire.h>
 #include <DallasTemperature.h>
+// For the Rtc1307 on arduino SDA and SCL pins :
+#include <Wire.h> // must be included here so that Arduino library object file references work
+#include <RtcDS1307.h>
+RtcDS1307<TwoWire> Rtc(Wire);
 
-#include "Wire.h"
-
-#define DS1307_I2C_ADDRESS 0x68  // This is the I2C address
-#if defined(ARDUINO) && ARDUINO >= 100   // Arduino v1.0 and newer
-  #define I2C_WRITE Wire.write
-  #define I2C_READ Wire.read
-#else                                   // Arduino Prior to v1.0
-  #define I2C_WRITE Wire.send
-  #define I2C_READ Wire.receive
-#endif
-
+// RtcDS1307 CONNECTIONS:
+// DS1307 SDA --> SDA
+// DS1307 SCL --> SCL
+// DS1307 VCC --> 5v
+// DS1307 GND --> GND
 
 
 // The LM35 temperature sensor data pin is connected
@@ -77,73 +76,49 @@ boolean bNeedPrintScreen = false;
 int ledPin =  13;
 
 // Global Variables
-byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;
+byte minute, hour, dayOfWeek, year;
 byte prevHour, prevMinute;
 //byte test;
 byte zero=0x00;
-const char  *Day[] = {"","Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+const char  *Day[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
 const char  *Mon[] = {"","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
 
-// Convert binary coded decimal to normal decimal numbers
-byte bcdToDec(byte val)
-{
-  return ( (val/16*10) + (val%16) );
+#define countof(a) (sizeof(a) / sizeof(a[0]))
+
+void printDateTime(const RtcDateTime& dt) {
+    char datestring[20];
+
+    snprintf_P(datestring,
+            countof(datestring),
+            PSTR("%02u/%02u/%04u %02u:%02u:%02u"),
+            dt.Month(),
+            dt.Day(),
+            dt.Year(),
+            dt.Hour(),
+            dt.Minute(),
+            dt.Second() );
+    Serial.print(datestring);
 }
 
-// Gets the date and time from the ds1307 and prints result
-void getTime()
-{
-  // Reset the register pointer
-  Wire.beginTransmission(DS1307_I2C_ADDRESS);
-  I2C_WRITE(zero);
-  Wire.endTransmission();
-
-  Wire.requestFrom(DS1307_I2C_ADDRESS, 7);
-
-  // A few of these need masks because certain bits are control bits
-  second     = bcdToDec(I2C_READ() & 0x7f);
-  minute     = bcdToDec(I2C_READ());
-  hour       = bcdToDec(I2C_READ() & 0x3f);  // Need to change this if 12 hour am/pm
-  dayOfWeek  = bcdToDec(I2C_READ());
-  dayOfMonth = bcdToDec(I2C_READ());
-  month      = bcdToDec(I2C_READ());
-  year       = bcdToDec(I2C_READ());
-
-#if DEBUG
-  if (hour < 10)
-    Serial.print("0");
-  Serial.print(hour, DEC);
-  Serial.print(":");
-  if (minute < 10)
-    Serial.print("0");
-  Serial.print(minute, DEC);
-  Serial.print(":");
-  if (second < 10)
-    Serial.print("0");
-  Serial.print(second, DEC);
-  Serial.print("  ");
-  Serial.print(Day[dayOfWeek]);
-  Serial.print(", ");
-  Serial.print(dayOfMonth, DEC);
-  Serial.print(" ");
-  Serial.print(Mon[month]);
-  Serial.print(" 20");
-  if (year < 10)
-    Serial.print("0");
-  Serial.println(year, DEC);
-#endif
-
-}
 
 void setup() {
-  Wire.begin();//For the RTC
   Serial.begin(57600);
 
+  Serial.print("compiled: ");
+  Serial.print(__DATE__);
+  Serial.println(__TIME__);
+
+  //--------RTC SETUP ------------
+  Rtc.Begin();
 
   pinMode(WARMER, OUTPUT);
   digitalWrite(WARMER, LOW);
   pinMode(LIGHT, OUTPUT);
   digitalWrite(LIGHT, LOW);
+
+  RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
+  printDateTime(compiled);
+  Serial.println();
 
   // Start up the Dallas library
   sensors.begin();
@@ -162,6 +137,47 @@ void setup() {
   #if DEBUG
   lcd.print(" DEBUG");
   #endif
+
+  if (!Rtc.IsDateTimeValid())
+  {
+      // Common Cuases:
+      //    1) first time you ran and the device wasn't running yet
+      //    2) the battery on the device is low or even missing
+
+      Serial.println("RTC lost confidence in the DateTime!");
+
+      // following line sets the RTC to the date & time this sketch was compiled
+      // it will also reset the valid flag internally unless the Rtc device is
+      // having an issue
+
+      Rtc.SetDateTime(compiled);
+  }
+
+  if (!Rtc.GetIsRunning())
+  {
+      Serial.println("RTC was not actively running, starting now");
+      Rtc.SetIsRunning(true);
+  }
+
+  RtcDateTime now = Rtc.GetDateTime();
+  if (now < compiled)
+  {
+      Serial.println("RTC is older than compile time!  (Updating DateTime)");
+      Rtc.SetDateTime(compiled);
+  }
+  else if (now > compiled)
+  {
+      Serial.println("RTC is newer than compile time. (this is expected)");
+  }
+  else if (now == compiled)
+  {
+      Serial.println("RTC is the same as compile time! (not expected but all is fine)");
+  }
+
+  // never assume the Rtc was last configured by you, so
+  // just clear them to your needed state
+  Rtc.SetSquareWavePin(DS1307SquareWaveOut_Low);
+
   delay(4000);
 
   lcd.clear();
@@ -234,7 +250,6 @@ void manageTemperature() {
 void printScreen(){
   char floatBuffer[10];
 
-
   if(hour != prevHour){
     prevHour=hour;
     lcd.begin();
@@ -285,7 +300,17 @@ void printScreen(){
 
 void loop() {
   delay(1000);
-  getTime();
+  if (!Rtc.IsDateTimeValid()) {
+        // Common Causes:
+        //    1) the battery on the device is low or even missing and the power line was disconnected
+        Serial.println("RTC lost confidence in the DateTime!");
+  }
+
+  RtcDateTime now = Rtc.GetDateTime();
+  hour = now.Hour();
+  minute = now.Minute();
+  dayOfWeek = now.DayOfWeek();
+  year = now.Year();
 
   /**********Light management*********/
   if (hour >= HOUR_ON && hour < HOUR_OFF && !bLightOn) {
