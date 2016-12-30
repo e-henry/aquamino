@@ -19,8 +19,6 @@
 
  */
 
-// Set to 1 to have debug info on serial interface
-#define DEBUG 0
 //Include Arduino when not using Arduino IDE
 #include <Arduino.h>
 
@@ -159,7 +157,8 @@ void setup() {
   lcd.setCursor(0, 0);
   lcd.print("    Aquamino    ");//25/04/2016
   lcd.setCursor(0, 1);
-  lcd.print("     v0.2.4");
+  lcd.print("     v");
+  lcd.print(VERSION);
   #if DEBUG
   lcd.print(" DEBUG");
   #endif
