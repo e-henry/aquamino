@@ -24,14 +24,14 @@
 
 
 // include the library code:
-#include <SerialLCD.h>
-#include <SoftwareSerial.h>
 // For the DS18B20 :
 #include <OneWire.h>
 #include <DallasTemperature.h>
 // For the Rtc1307 on arduino SDA and SCL pins :
 #include <Wire.h> // must be included here so that Arduino library object file references work
 #include <RtcDS1307.h>
+#include <LiquidCrystal_I2C.h>
+
 RtcDS1307<TwoWire> Rtc(Wire);
 
 // RtcDS1307 CONNECTIONS:
@@ -60,8 +60,11 @@ DallasTemperature sensors(&oneWire);
 
 // If you are using serial interface LCD
 // initialize the LCD library with the SerialLCD lib
-SerialLCD lcd(11,12);//assign soft serial pins Tx Rx
+//SerialLCD lcd(11,12);//assign soft serial pins Tx Rx (or sda scl)
 
+// set the LCD address to 0x30 for a 16 chars and 2 line display
+// (Most I2c lcd use 0x27, find what works for yours)
+LiquidCrystal_I2C lcd(0x3f,16,2);
 
 // If you are using a parallel interface LCD
 // initialize the LiquidCrystal library with the numbers of the interface pins
@@ -121,9 +124,15 @@ void setup() {
   Serial.println();
 
   // Start up the Dallas library
+  #if DEBUG
+  Serial.println("Init temperature");
+  #endif
   sensors.begin();
   sensors.setResolution(11);// 20.125°C
 
+  #if DEBUG
+  Serial.println("Init LCD");
+  #endif
   prevHour = hour;
   prevMinute = minute;
   lcd.begin();
@@ -143,7 +152,6 @@ void setup() {
       // Common Cuases:
       //    1) first time you ran and the device wasn't running yet
       //    2) the battery on the device is low or even missing
-
       Serial.println("RTC lost confidence in the DateTime!");
 
       // following line sets the RTC to the date & time this sketch was compiled
@@ -181,6 +189,9 @@ void setup() {
   delay(4000);
 
   lcd.clear();
+  #if DEBUG
+  Serial.println("End setup ");
+  #endif
 }
 
 void light(int iState){
@@ -262,11 +273,13 @@ void printScreen(){
   lcd.setCursor(0, 0);
   lcd.print(" A:");
   dtostrf(fAirTemp, 2, 1, floatBuffer);
-  lcd.write((const char *) floatBuffer, 4);
+  //lcd.print((const char *) floatBuffer, 4);
+  lcd.print(fAirTemp);
   lcd.print( "  " );
   lcd.print("W:");
   dtostrf(fWaterTemp, 2, 1, floatBuffer);
-  lcd.write((const char *) floatBuffer, 4);
+  //lcd.print((const char *) floatBuffer, 4);
+  lcd.print(fWaterTemp);
   lcd.print( "  " );
 
 
@@ -299,6 +312,9 @@ void printScreen(){
 
 
 void loop() {
+  #if DEBUG
+  Serial.println("Begin loop ");
+  #endif
   delay(1000);
   if (!Rtc.IsDateTimeValid()) {
         // Common Causes:
