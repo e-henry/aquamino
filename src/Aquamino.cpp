@@ -57,7 +57,9 @@ RtcDS1307<TwoWire> Rtc(Wire);
 OneWire oneWire(WATER_TEMP_PIN);
 // Pass our oneWire reference to Dallas Temperature.
 DallasTemperature sensors(&oneWire);
-
+// arrays to hold device addresses
+DeviceAddress waterThermometer = { 0x28, 0x5C, 0x1B, 0x28, 0x00, 0x00, 0x80, 0xA1 };
+DeviceAddress airThermometer = { 0x28, 0x32, 0x23, 0x28, 0x00, 0x00, 0x80, 0xCB };
 // If you are using serial interface LCD
 // initialize the LCD library with the SerialLCD lib
 //SerialLCD lcd(11,12);//assign soft serial pins Tx Rx (or sda scl)
@@ -103,6 +105,16 @@ void printDateTime(const RtcDateTime& dt) {
     Serial.print(datestring);
 }
 
+// function to print a device address
+void printAddress(DeviceAddress deviceAddress)
+{
+  for (uint8_t i = 0; i < 8; i++)
+  {
+    // zero pad the address if necessary
+    if (deviceAddress[i] < 16) Serial.print("0");
+    Serial.print(deviceAddress[i], HEX);
+  }
+}
 
 void setup() {
   Serial.begin(57600);
@@ -128,7 +140,29 @@ void setup() {
   Serial.println("Init temperature");
   #endif
   sensors.begin();
-  sensors.setResolution(11);// 20.125°C
+  Serial.print("Found ");
+  Serial.print(sensors.getDeviceCount(), DEC);
+  Serial.println(" temperature devices.");
+  // report parasite power requirements
+  Serial.print("Parasite power is: ");
+  if (sensors.isParasitePowerMode()) Serial.println("ON");
+  else Serial.println("OFF");
+//Uncomment to know the adress of your sensors
+/*
+  if (!sensors.getAddress(waterThermometer, 0)) Serial.println("Unable to find address for Device 0");
+  if (!sensors.getAddress(airThermometer, 1)) Serial.println("Unable to find address for Device 1");
+
+  // show the addresses we found on the bus
+  Serial.print("Device 0 Address: ");
+  printAddress(waterThermometer);
+  Serial.println();
+
+  Serial.print("Device 1 Address: ");
+  printAddress(airThermometer);
+  Serial.println();
+*/
+
+  sensors.setResolution(11);// 20.12°C
 
   #if DEBUG
   Serial.println("Init LCD");
@@ -200,28 +234,16 @@ void light(int iState){
 
 void warmer(int iState){
   digitalWrite(ledPin, iState);
-  digitalWrite(WARMER, iState);
+  digitalWrite(WARMER, !iState);//Fixme : Need to know why this relay is reversed
 }
 
-float getAirTemp(){
-  float fT;
-  analogRead(AIR_TEMP_PIN);
-  delay(10);
-  fT = analogRead(AIR_TEMP_PIN);        //read the value from the sensor
-  fT = (5.0 * fT * 100.0)/1024.0;  //convert the analog data to temperature
-  return fT;
-  //return (float)(25+(second%10));
-}
-
-float getWaterTemp(){
+float getTemperature(DeviceAddress deviceAddress){
   float fT = 99;
-  // Send the command to get temperatures
-  sensors.requestTemperatures();
   //Get the temperature from the first sensor found
   #if DEBUG
-  Serial.print("Temperature for 1st DS18B20 probe is: ");
+  Serial.print("Temperature: ");
   #endif
-  fT = sensors.getTempCByIndex(0);
+  fT = sensors.getTempC(deviceAddress);
   #if DEBUG
   Serial.println(fT);
   #endif
@@ -230,8 +252,11 @@ float getWaterTemp(){
 }
 
 void manageTemperature() {
-  fAirTemp = getAirTemp();
-  fWaterTemp = getWaterTemp();
+  // Send the command to get temperature
+  sensors.requestTemperatures();
+
+  fAirTemp = getTemperature(airThermometer);
+  fWaterTemp = getTemperature(waterThermometer);
 
   if (fWaterTemp == -127.00 || fWaterTemp == 85.00 || fWaterTemp < 1.00 || year == 0) {
     lcd.setCursor(0, 0);
@@ -254,7 +279,7 @@ void manageTemperature() {
 
 /*
 *****************
-* A:20.3  W:25.2
+*A:20.25  W:25.50
 * 18:02 SAT  OFF
 *****************
 */
@@ -271,7 +296,7 @@ void printScreen(){
   }
   //Temperature
   lcd.setCursor(0, 0);
-  lcd.print(" A:");
+  lcd.print("A:");
   dtostrf(fAirTemp, 2, 1, floatBuffer);
   //lcd.print((const char *) floatBuffer, 4);
   lcd.print(fAirTemp);
