@@ -291,7 +291,9 @@ void printScreen(){
     prevHour=hour;
     lcd.begin();
     if(bLightOn)
-      lcd.backlight();
+      // FIXME: Restore next line when power problem is solved
+      //lcd.backlight();
+      lcd.noBacklight();
     else
       lcd.noBacklight();
   }
