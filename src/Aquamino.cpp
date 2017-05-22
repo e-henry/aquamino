@@ -46,12 +46,15 @@ RtcDS1307<TwoWire> Rtc(Wire);
 #define AIR_TEMP_PIN 0 //Analog 0
 // The DS18B20 is on 8
 #define WATER_TEMP_PIN 8 //Digital 8
-#define MIN 24.50
-#define MAX 25.00
 #define WARMER 9 //Digital 9
 #define LIGHT 10 //Digital 10
 #define HOUR_ON 12
 #define HOUR_OFF 22
+
+#define TEMPERATURE 25.00
+const float MIN = TEMPERATURE - 0.2;
+const float MAX = TEMPERATURE;
+const float OVERHEAT_TEMP = TEMPERATURE - 2.00;
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire(WATER_TEMP_PIN);
@@ -78,6 +81,7 @@ float fAirTemp = 0;
 boolean bWarmerOn = false;
 boolean bLightOn = false;
 boolean bNeedPrintScreen = false;
+boolean bOverheat = false;
 int ledPin =  13;
 
 // Global Variables
@@ -266,7 +270,18 @@ void manageTemperature() {
     warmer(LOW);
     return;
   }
-  if((fWaterTemp < MIN)){
+  if(fAirTemp > OVERHEAT_TEMP && !bOverheat){
+    bOverheat = true;
+    //stop the warmer immediately
+    warmer(LOW);
+    bWarmerOn = false;
+    bNeedPrintScreen = true;
+  }
+  if (fAirTemp < (OVERHEAT_TEMP - 0.5)) {
+    bOverheat = false;
+    bNeedPrintScreen = true;
+  }
+  if((fWaterTemp < MIN && !bOverheat)){
     warmer(HIGH);
     bWarmerOn = true;
     bNeedPrintScreen = true;
@@ -280,8 +295,8 @@ void manageTemperature() {
 
 /*
 *****************
-*A:20.25  W:25.50
-* 18:02 SAT  OFF
+*A:20.25! W:25.50
+* 18:02 SAT  OFFD
 *****************
 */
 void printScreen(){
@@ -303,7 +318,10 @@ void printScreen(){
   dtostrf(fAirTemp, 2, 1, floatBuffer);
   //lcd.print((const char *) floatBuffer, 4);
   lcd.print(fAirTemp);
-  lcd.print( "  " );
+  if (bOverheat)
+    lcd.print( "! " );
+  else
+    lcd.print( "  " );
   lcd.print("W:");
   dtostrf(fWaterTemp, 2, 1, floatBuffer);
   //lcd.print((const char *) floatBuffer, 4);
