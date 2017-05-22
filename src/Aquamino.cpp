@@ -173,12 +173,13 @@ void setup() {
   lcd.backlight();
   lcd.noCursor();
   lcd.setCursor(0, 0);
-  lcd.print("    Aquamino    ");//25/04/2016
+  lcd.print("    Aquamino    ");
   lcd.setCursor(0, 1);
+  #if DEBUG
+  lcd.print(__DATE__);
+  #else
   lcd.print("     v");
   lcd.print(VERSION);
-  #if DEBUG
-  lcd.print(" DEBUG");
   #endif
 
   if (!Rtc.IsDateTimeValid())
