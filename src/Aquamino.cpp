@@ -41,13 +41,11 @@ RtcDS1307<TwoWire> Rtc(Wire);
 // DS1307 GND --> GND
 
 
-// The LM35 temperature sensor data pin is connected
-//to the analog 0 on the Arduino
-#define AIR_TEMP_PIN 0 //Analog 0
-// The DS18B20 is on 8
+// The DS18B20 are on pin 8
 #define WATER_TEMP_PIN 8 //Digital 8
 #define WARMER 9 //Digital 9
 #define LIGHT 10 //Digital 10
+#define FAN 11 //Digital 11
 #define HOUR_ON 12
 #define HOUR_OFF 22
 
@@ -80,6 +78,7 @@ float fWaterTemp = 0;
 float fAirTemp = 0;
 boolean bWarmerOn = false;
 boolean bLightOn = false;
+boolean bFanOn = false;
 boolean bNeedPrintScreen = false;
 boolean bOverheat = false;
 int ledPin =  13;
@@ -127,14 +126,17 @@ void setup() {
   Serial.print(__DATE__);
   Serial.println(__TIME__);
 
-  //--------RTC SETUP ------------
-  Rtc.Begin();
 
+  //--------PIN SETUP-------------
   pinMode(WARMER, OUTPUT);
   digitalWrite(WARMER, LOW);
   pinMode(LIGHT, OUTPUT);
   digitalWrite(LIGHT, LOW);
-
+  pinMode(FAN, OUTPUT);
+  digitalWrite(FAN, LOW);
+  
+  //--------RTC SETUP ------------
+  Rtc.Begin();
   RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
   printDateTime(compiled);
   Serial.println();
@@ -242,6 +244,10 @@ void warmer(int iState){
   digitalWrite(WARMER, !iState);//Fixme : Need to know why this relay is reversed
 }
 
+void fan(int iState){
+  digitalWrite(FAN, !iState);//Fixme : Need to know why this relay is reversed
+}
+
 float getTemperature(DeviceAddress deviceAddress){
   float fT = 99;
   //Get the temperature from the first sensor found
@@ -291,6 +297,17 @@ void manageTemperature() {
     bWarmerOn = false;
     bNeedPrintScreen = true;
   }
+  if((fWaterTemp > MAX && bOverheat && !bFanOn)){
+    fan(HIGH);
+    bFanOn = true;
+    bNeedPrintScreen = true;
+  }
+  if((fWaterTemp < MIN && bFanOn)){
+    fan(LOW);
+    bFanOn = false;
+    bNeedPrintScreen = true;
+  }
+
 }
 
 /*
@@ -306,9 +323,7 @@ void printScreen(){
     prevHour=hour;
     lcd.begin();
     if(bLightOn)
-      // FIXME: Restore next line when power problem is solved
-      //lcd.backlight();
-      lcd.noBacklight();
+      lcd.backlight();
     else
       lcd.noBacklight();
   }
@@ -318,7 +333,9 @@ void printScreen(){
   dtostrf(fAirTemp, 2, 1, floatBuffer);
   //lcd.print((const char *) floatBuffer, 4);
   lcd.print(fAirTemp);
-  if (bOverheat)
+  if (bFanOn)
+    lcd.print( "* " );
+  else if (bOverheat)
     lcd.print( "! " );
   else
     lcd.print( "  " );
