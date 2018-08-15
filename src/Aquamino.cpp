@@ -119,122 +119,6 @@ void printAddress(DeviceAddress deviceAddress)
   }
 }
 
-void setup() {
-  Serial.begin(57600);
-
-  Serial.print("compiled: ");
-  Serial.print(__DATE__);
-  Serial.println(__TIME__);
-
-
-  //--------PIN SETUP-------------
-  pinMode(WARMER, OUTPUT);
-  digitalWrite(WARMER, LOW);
-  pinMode(LIGHT, OUTPUT);
-  digitalWrite(LIGHT, LOW);
-  pinMode(FAN, OUTPUT);
-  digitalWrite(FAN, LOW);
-  
-  //--------RTC SETUP ------------
-  Rtc.Begin();
-  RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
-  printDateTime(compiled);
-  Serial.println();
-
-  // Start up the Dallas library
-  #if DEBUG
-  Serial.println("Init temperature");
-  #endif
-  sensors.begin();
-  Serial.print("Found ");
-  Serial.print(sensors.getDeviceCount(), DEC);
-  Serial.println(" temperature devices.");
-  // report parasite power requirements
-  Serial.print("Parasite power is: ");
-  if (sensors.isParasitePowerMode()) Serial.println("ON");
-  else Serial.println("OFF");
-//Uncomment to know the adress of your sensors
-/*
-  if (!sensors.getAddress(waterThermometer, 0)) Serial.println("Unable to find address for Device 0");
-  if (!sensors.getAddress(airThermometer, 1)) Serial.println("Unable to find address for Device 1");
-
-  // show the addresses we found on the bus
-  Serial.print("Device 0 Address: ");
-  printAddress(waterThermometer);
-  Serial.println();
-
-  Serial.print("Device 1 Address: ");
-  printAddress(airThermometer);
-  Serial.println();
-*/
-
-  sensors.setResolution(11);// 20.12°C
-
-  #if DEBUG
-  Serial.println("Init LCD");
-  #endif
-  prevHour = hour;
-  prevMinute = minute;
-  lcd.begin();
-  lcd.backlight();
-  lcd.noCursor();
-  lcd.setCursor(0, 0);
-  lcd.print("    Aquamino    ");
-  lcd.setCursor(0, 1);
-  #if DEBUG
-  lcd.print(__DATE__);
-  #else
-  lcd.print("     v");
-  lcd.print(VERSION);
-  #endif
-
-  if (!Rtc.IsDateTimeValid())
-  {
-      // Common Cuases:
-      //    1) first time you ran and the device wasn't running yet
-      //    2) the battery on the device is low or even missing
-      Serial.println("RTC lost confidence in the DateTime!");
-
-      // following line sets the RTC to the date & time this sketch was compiled
-      // it will also reset the valid flag internally unless the Rtc device is
-      // having an issue
-
-      Rtc.SetDateTime(compiled);
-  }
-
-  if (!Rtc.GetIsRunning())
-  {
-      Serial.println("RTC was not actively running, starting now");
-      Rtc.SetIsRunning(true);
-  }
-
-  RtcDateTime now = Rtc.GetDateTime();
-  if (now < compiled)
-  {
-      Serial.println("RTC is older than compile time!  (Updating DateTime)");
-      Rtc.SetDateTime(compiled);
-  }
-  else if (now > compiled)
-  {
-      Serial.println("RTC is newer than compile time. (this is expected)");
-  }
-  else if (now == compiled)
-  {
-      Serial.println("RTC is the same as compile time! (not expected but all is fine)");
-  }
-
-  // never assume the Rtc was last configured by you, so
-  // just clear them to your needed state
-  Rtc.SetSquareWavePin(DS1307SquareWaveOut_Low);
-
-  delay(4000);
-
-  lcd.clear();
-  #if DEBUG
-  Serial.println("End setup ");
-  #endif
-}
-
 void light(int iState){
   digitalWrite(LIGHT, iState);
 }
@@ -371,6 +255,125 @@ void printScreen(){
   lcd.print("D");
   #endif
 
+}
+
+void setup() {
+  Serial.begin(57600);
+
+  Serial.print("compiled: ");
+  Serial.print(__DATE__);
+  Serial.println(__TIME__);
+
+
+  //--------PIN SETUP-------------
+  pinMode(WARMER, OUTPUT);
+  digitalWrite(WARMER, LOW);
+  pinMode(LIGHT, OUTPUT);
+  digitalWrite(LIGHT, LOW);
+  pinMode(FAN, OUTPUT);
+  digitalWrite(FAN, LOW);
+
+  //--------RTC SETUP ------------
+  Rtc.Begin();
+  RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
+  printDateTime(compiled);
+  Serial.println();
+
+  // Start up the Dallas library
+  #if DEBUG
+  Serial.println("Init temperature");
+  #endif
+  sensors.begin();
+  Serial.print("Found ");
+  Serial.print(sensors.getDeviceCount(), DEC);
+  Serial.println(" temperature devices.");
+  // report parasite power requirements
+  Serial.print("Parasite power is: ");
+  if (sensors.isParasitePowerMode()) Serial.println("ON");
+  else Serial.println("OFF");
+//Uncomment to know the adress of your sensors
+/*
+  if (!sensors.getAddress(waterThermometer, 0)) Serial.println("Unable to find address for Device 0");
+  if (!sensors.getAddress(airThermometer, 1)) Serial.println("Unable to find address for Device 1");
+
+  // show the addresses we found on the bus
+  Serial.print("Device 0 Address: ");
+  printAddress(waterThermometer);
+  Serial.println();
+
+  Serial.print("Device 1 Address: ");
+  printAddress(airThermometer);
+  Serial.println();
+*/
+
+  sensors.setResolution(11);// 20.12°C
+
+  #if DEBUG
+  Serial.println("Init LCD");
+  #endif
+  prevHour = hour;
+  prevMinute = minute;
+  lcd.begin();
+  lcd.backlight();
+  lcd.noCursor();
+  lcd.setCursor(0, 0);
+  lcd.print("    Aquamino    ");
+  lcd.setCursor(0, 1);
+  #if DEBUG
+  lcd.print(__DATE__);
+  #else
+  lcd.print("     v");
+  lcd.print(VERSION);
+  #endif
+
+  if (!Rtc.IsDateTimeValid())
+  {
+      // Common Cuases:
+      //    1) first time you ran and the device wasn't running yet
+      //    2) the battery on the device is low or even missing
+      Serial.println("RTC lost confidence in the DateTime!");
+
+      // following line sets the RTC to the date & time this sketch was compiled
+      // it will also reset the valid flag internally unless the Rtc device is
+      // having an issue
+
+      Rtc.SetDateTime(compiled);
+  }
+
+  if (!Rtc.GetIsRunning())
+  {
+      Serial.println("RTC was not actively running, starting now");
+      Rtc.SetIsRunning(true);
+  }
+
+  RtcDateTime now = Rtc.GetDateTime();
+  if (now < compiled)
+  {
+      Serial.println("RTC is older than compile time!  (Updating DateTime)");
+      Rtc.SetDateTime(compiled);
+  }
+  else if (now > compiled)
+  {
+      Serial.println("RTC is newer than compile time. (this is expected)");
+  }
+  else if (now == compiled)
+  {
+      Serial.println("RTC is the same as compile time! (not expected but all is fine)");
+  }
+
+  // never assume the Rtc was last configured by you, so
+  // just clear them to your needed state
+  Rtc.SetSquareWavePin(DS1307SquareWaveOut_Low);
+
+  delay(4000);
+  fan(LOW);
+  light(LOW);
+  warmer(LOW);
+
+  lcd.clear();
+  #if DEBUG
+  Serial.println("End setup ");
+  #endif
 }
 
 
